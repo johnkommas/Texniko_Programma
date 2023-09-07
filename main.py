@@ -5,6 +5,7 @@ import os
 import send_mail
 from send_mail import users as mail_users
 from datetime import datetime
+import time
 
 # SETUP OPTION TO DISPLAY ALL DATA IN PRINT
 pd.set_option('display.max_columns', None)
@@ -260,4 +261,9 @@ def run():
 
 
 if __name__ == "__main__":
+    start = time.perf_counter()
     run()
+    stop = time.perf_counter()
+    print(stop - start)
+    #  Average Time Only Excel     :  ±0.04 sec
+    #  Average Time Excel & E-mail :  ±3.25 sec
