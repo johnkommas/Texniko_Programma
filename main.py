@@ -170,7 +170,7 @@ def export(path_to_file, df, year):
         worksheet = writer.sheets['TODAY']
 
         # ADD ΔΡΑΣΗ ONCE PER GROUP
-        colors = ['#A3A3A3', "D9D9D9"]
+        colors = ['#A3A3A3', "#D9D9D9"]
         i = 0
         start = 3
         worksheet.write('B2', 'ΔΡΑΣΗ', header_format)
@@ -190,7 +190,7 @@ def export(path_to_file, df, year):
             end = start + sql_answer.shape[0] - 1
             worksheet.merge_range(f'B{start}:B{end}', drasi, center_vert_text)
             start = end + 1
-            if i == 1:
+            if i:
                 i = 0
             else:
                 i += 1
