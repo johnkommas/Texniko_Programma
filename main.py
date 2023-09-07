@@ -49,6 +49,27 @@ def rename_and_select_columns(df):
 
 
 def export(path_to_file, df, year):
+    """
+    This function acts as an Excel writer that creates an Excel workbook, formats it, and adds data to it.
+
+    :param path_to_file: The path to the file where the Excel should be written.
+    :param df: The DataFrame containing data that should be written to the Excel file.
+    :param year: The specific year for which the Excel file is being created.
+
+    This function opens the Excel file at the given path (or creates it if it does not exist).
+    It then selects and renames columns from the DataFrame. It then defines the formats that
+    will be used to style the workbook. It adds data to an Excel worksheet and formats it.
+
+    Specifically, this function creates 8 different formats for the workbook's cells, adds data from an input
+    DataFrame to the workbook, writes column headers to the Excel file with a specific format, and writes
+    unique values from a specific DataFrame column to the worksheet. It also manipulates worksheet cells based
+    on certain DataFrame-based conditions, sets column formats, freezes panes, and writes DataFrame-summed totals
+    to the worksheet.
+
+    Once all operations on the Worksheet object have been completed, the Workbook (and embedded Worksheet) is
+    saved to a xlsx file.
+    """
+
     s_df = rename_and_select_columns(df)
 
     # FIRE UP EXCEL WRITER
@@ -218,6 +239,12 @@ def export(path_to_file, df, year):
 
 
 def run():
+    """
+        This function extracts data from an Excel file for a given year and exports the data
+        to another Excel file. The path of the source file is derived from the current working
+        directory and the year provided as the input. If the source file doesn't exist,
+        an appropriate message is printed.
+    """
     cwd = os.path.dirname(os.path.abspath(__file__))
     year = 2023  # int(input("ΕΤΟΣ:"))
     excel_file = f'{cwd}/DATA/{year}//1.xls'
