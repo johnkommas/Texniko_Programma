@@ -254,7 +254,7 @@ def run():
     if os.path.exists(excel_file):
         df = pd.read_excel(excel_file)
         export(file, df, year)
-        # send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+        send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
     else:
         print(f"File not found at {excel_file}")
 
