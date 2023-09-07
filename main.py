@@ -4,35 +4,52 @@ import pandas as pd
 import os
 import send_mail
 from send_mail import users as mail_users
+from datetime import datetime
 
 # SETUP OPTION TO DISPLAY ALL DATA IN PRINT
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_rows', None)
 
+COLUMN_MAPPING = {'Tίτλος': 'ΤΙΤΛΟΣ',
+                  'Κατηγορία': 'ΚΑΤΗΓΟΡΙΑ',
+                  'Υπηρεσία': 'ΥΠΗΡΕΣΙΑ',
+                  'ΚΑ Εξόδων': 'ΚΑ ΕΞΟΔΩΝ',
+                  'Συνολικός Πρ/σμός Έργου': 'ΣΥΝΟΛΙΚΟΣ ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ',
+                  'Υφ. Νομική Δέσμευση': 'ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ',
+                  'Εξοφλημένα Τιμολόγια': 'ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ',
+                  'Υπόλοιπο Πληρωθέν Υφ. Νομ. Δεσμ.': 'ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.',
+                  'Προταθέντα 2024': 'ΠΡΟΤΑΘΕΝΤΑ 2024',
+                  'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ': 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ',
+                  'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ': 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ',
+                  'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ': 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
+                  'Παρατηρήσεις': 'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ'
+                  }
+
+SELECTED_COLUMNS = ['ΤΙΤΛΟΣ', 'ΚΑΤΗΓΟΡΙΑ', 'ΥΠΗΡΕΣΙΑ', 'ΚΑ ΕΞΟΔΩΝ', 'ΣΥΝΟΛΙΚΟΣ ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ',
+                    'ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ', 'ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ', 'ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.',
+                    'ΠΡΟΤΑΘΕΝΤΑ 2024', 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ', 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ', 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
+                    'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ']
+
+
+def rename_and_select_columns(df):
+    """
+    Function to rename and select the required columns in the dataframe.
+
+    :param df: Dataframe to be manipulated
+    :return: A new dataframe with renamed and chosen columns
+    """
+    # Rename column names
+    df = df.rename(columns=COLUMN_MAPPING)
+
+    # Choose columns and order
+    s_df = df[SELECTED_COLUMNS]
+
+    return s_df
+
 
 def export(path_to_file, df, year):
-    # RENAME COLUMN NAMES
-    df = df.rename(columns={'Tίτλος': 'ΤΙΤΛΟΣ',
-                            'Κατηγορία': 'ΚΑΤΗΓΟΡΙΑ',
-                            'Υπηρεσία': 'ΥΠΗΡΕΣΙΑ',
-                            'ΚΑ Εξόδων': 'ΚΑ ΕΞΟΔΩΝ',
-                            'Συνολικός Πρ/σμός Έργου': 'ΣΥΝΟΛΙΚΟΣ ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ',
-                            'Υφ. Νομική Δέσμευση': 'ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ',
-                            'Εξοφλημένα Τιμολόγια': 'ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ',
-                            'Υπόλοιπο Πληρωθέν Υφ. Νομ. Δεσμ.': 'ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.',
-                            'Προταθέντα 2024': 'ΠΡΟΤΑΘΕΝΤΑ 2024',
-                            'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ': 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ',
-                            'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ': 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ',
-                            'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ': 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
-                            'Παρατηρήσεις': 'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ'
-                            })
-
-    # CHOOSE COLUMNS AND ORDER
-    s_df = df[['ΤΙΤΛΟΣ', 'ΚΑΤΗΓΟΡΙΑ', 'ΥΠΗΡΕΣΙΑ', 'ΚΑ ΕΞΟΔΩΝ', 'ΣΥΝΟΛΙΚΟΣ ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ',
-               'ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ', 'ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ', 'ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.',
-               'ΠΡΟΤΑΘΕΝΤΑ 2024', 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ', 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ', 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
-               'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ']]
+    s_df = rename_and_select_columns(df)
 
     # FIRE UP EXCEL WRITER
     with pd.ExcelWriter(path_to_file, engine='xlsxwriter') as writer:
@@ -144,6 +161,7 @@ def export(path_to_file, df, year):
                 "font_name": "Avenir Next",
                 'bold': True,
                 'font_size': 8,
+                'text_wrap': True,
                 'bg_color': colors[i],
                 'border': 1
             })
@@ -164,10 +182,13 @@ def export(path_to_file, df, year):
         # ADD TITLE ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΜΑ
         worksheet.merge_range(f'A1:C1', f'ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΑ {year}', normal_bold_10_center)
 
+        # ADD CREATION DATE
+        worksheet.merge_range(f'M1:O1', f'ΗΜΕΡΟΜΗΝΙΑ ΔΗΜΙΟΥΡΓΙΑΣ: {datetime.now().strftime("%d %b %Y %H:%M:%S").upper()}', normal_bold_10_center)
+
         # Autofit the worksheet.
         worksheet.autofit()
         worksheet.set_column(f'A:A', 4, normal_10)
-        worksheet.set_column(f'B:B', 4)
+        worksheet.set_column(f'B:B', 5)
         worksheet.set_column('C:C', 50, normal_bold_10)
         worksheet.set_column('D:D', 6.5, normal_8)
         worksheet.set_column('E:E', 22, normal_8)
@@ -199,11 +220,16 @@ def export(path_to_file, df, year):
 def run():
     cwd = os.path.dirname(os.path.abspath(__file__))
     year = 2023  # int(input("ΕΤΟΣ:"))
-    files = f'{cwd}/DATA/{year}'
-    df = pd.read_excel(f'{files}/1.xls')
+    excel_file = f'{cwd}/DATA/{year}//1.xls'
     file = f'{cwd}/final.xlsx'
-    export(file, df, year)
-    send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+
+    # CHECK IF FILE EXISTS
+    if os.path.exists(excel_file):
+        df = pd.read_excel(excel_file)
+        export(file, df, year)
+        # send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+    else:
+        print(f"File not found at {excel_file}")
 
 
 if __name__ == "__main__":
