@@ -2,6 +2,7 @@
 
 import pandas as pd
 import os
+import copy
 import send_mail
 from send_mail import users as mail_users
 from datetime import datetime
@@ -11,6 +12,9 @@ import time
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_rows', None)
+
+
+
 
 COLUMN_MAPPING = {'Tίτλος': 'ΤΙΤΛΟΣ',
                   'Κατηγορία': 'ΚΑΤΗΓΟΡΙΑ',
@@ -29,11 +33,16 @@ COLUMN_MAPPING = {'Tίτλος': 'ΤΙΤΛΟΣ',
 
 SELECTED_COLUMNS = ['ΤΙΤΛΟΣ', 'ΚΑΤΗΓΟΡΙΑ', 'ΥΠΗΡΕΣΙΑ', 'ΚΑ ΕΞΟΔΩΝ', 'ΣΥΝΟΛΙΚΟΣ ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ',
                     'ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ', 'ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ', 'ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.',
+                    'ΕΚΤΙΜΗΣΗ ΠΛΗΡΩΜΩΝ 31/12/2022', 'ΣΥΜΠΛΗΡΩΜΕΝΗ ΕΚΤΙΜΗΣΗ', 'ΔΙΑΦΟΡΑ ΕΚΤΙΜΗΣΕΩΝ',
                     'ΠΡΟΤΑΘΕΝΤΑ 2024', 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ', 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ', 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
                     'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ']
 
 
-def rename_and_select_columns(df):
+
+COLOR_MAPPING = {"bg_colors": ['#EBA796', '#56A2AE', '#51AEAD', '#5DA5C5'],
+                 "font_colors":['black', 'black', 'black', 'black'] }
+
+def rename_and_select_columns(df, year):
     """
     Function to rename and select the required columns in the dataframe.
 
@@ -43,10 +52,45 @@ def rename_and_select_columns(df):
     # Rename column names
     df = df.rename(columns=COLUMN_MAPPING)
 
+    # ADD COLUMS IF FILE DOES NOT EXIST
+    cwd = os.path.dirname(os.path.abspath(__file__))
+    excel_file = f'{cwd}/DATA/{year}/first.xlsx'
+    if os.path.exists(excel_file):
+        excel_df = pd.read_excel(excel_file, skiprows=1)
+        excel_df = excel_df[['ΤΙΤΛΟΣ', 'ΕΚΤΙΜΗΣΗ ΠΛΗΡΩΜΩΝ 31/12/2022', 'ΣΥΜΠΛΗΡΩΜΕΝΗ ΕΚΤΙΜΗΣΗ', 'ΔΙΑΦΟΡΑ ΕΚΤΙΜΗΣΕΩΝ']]
+        df = pd.merge(df, excel_df, on='ΤΙΤΛΟΣ')
+
+    else:
+        df['ΕΚΤΙΜΗΣΗ ΠΛΗΡΩΜΩΝ 31/12/2022'] = None
+        df['ΣΥΜΠΛΗΡΩΜΕΝΗ ΕΚΤΙΜΗΣΗ'] = None
+        df['ΔΙΑΦΟΡΑ ΕΚΤΙΜΗΣΕΩΝ'] = None
+
     # Choose columns and order
     s_df = df[SELECTED_COLUMNS]
 
     return s_df
+
+
+def color_entire_cell(df, column_name, worksheet, workbook, cell_format):
+    # Iterate over the DataFrame.
+    for row_idx, cell_value in enumerate(df[column_name], start=2):
+        if pd.notna(cell_value):  # Apply the format only if the cell is not empty.
+            worksheet.write(row_idx, df.columns.get_loc(column_name) + 2, cell_value, workbook.add_format(cell_format))
+        else:
+            worksheet.write(row_idx, df.columns.get_loc(column_name) + 2, '', workbook.add_format(cell_format))
+    # FORMAT TITLE
+    header_format = {
+        'border': 10,
+        'text_wrap': True,
+        'bold': True,
+        'align': 'center',
+        'valign': 'vcenter',
+        "font_size": 10,
+        "font_name": "Avenir Next",
+        "bg_color": cell_format.get("bg_color")
+    }
+    worksheet.write(1, df.columns.get_loc(column_name) + 2, column_name, workbook.add_format(header_format))
+    return cell_format
 
 
 def export(path_to_file, df, year):
@@ -71,7 +115,7 @@ def export(path_to_file, df, year):
     saved to a xlsx file.
     """
 
-    s_df = rename_and_select_columns(df)
+    s_df = rename_and_select_columns(df, year)
 
     # FIRE UP EXCEL WRITER
     with pd.ExcelWriter(path_to_file, engine='xlsxwriter') as writer:
@@ -80,6 +124,7 @@ def export(path_to_file, df, year):
 
         # ADD FORMATS BELOW
         number_8_pink = workbook.add_format({
+            'border': 1,
             'num_format': '€#,##0.00',
             'align': 'center',
             'valign': 'vcenter',
@@ -90,6 +135,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         number_8_black = workbook.add_format({
+            'border': 1,
             'num_format': '€#,##0.00',
             'align': 'center',
             'valign': 'vcenter',
@@ -100,6 +146,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         number_8_green = workbook.add_format({
+            'border': 1,
             'num_format': '€#,##0.00',
             'align': 'center',
             'valign': 'vcenter',
@@ -110,6 +157,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         number_10_black_bold = workbook.add_format({
+            'border': 1,
             'num_format': '€#,##0.00',
             'align': 'center',
             'valign': 'vcenter',
@@ -120,6 +168,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         normal_10 = workbook.add_format({
+            'border': 1,
             'align': 'left',
             'valign': 'vcenter',
             'bold': False,
@@ -128,6 +177,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         normal_8 = workbook.add_format({
+            'border': 1,
             'align': 'left',
             'bold': False,
             'valign': 'vcenter',
@@ -136,6 +186,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         normal_bold_10 = workbook.add_format({
+            'border': 1,
             'align': 'left',
             'bold': True,
             'valign': 'vcenter',
@@ -144,6 +195,7 @@ def export(path_to_file, df, year):
             "font_name": "Avenir Next"})
 
         normal_bold_10_center = workbook.add_format({
+            'border': 1,
             'align': 'center',
             'bold': True,
             'valign': 'vcenter',
@@ -151,7 +203,18 @@ def export(path_to_file, df, year):
             "font_size": 10,
             "font_name": "Avenir Next"})
 
+        yellow = workbook.add_format({
+            'border': 1,
+            'align': 'center',
+            'bold': True,
+            'valign': 'vcenter',
+            'text_wrap': True,
+            "font_size": 10,
+            "bg_color": 'yellow',
+            "font_name": "Avenir Next"})
+
         header_format = workbook.add_format({
+            'border': 10,
             'text_wrap': True,
             'bold': True,
             'align': 'center',
@@ -159,6 +222,69 @@ def export(path_to_file, df, year):
             "font_size": 10,
             "font_name": "Avenir Next",
         })
+
+        pallete_a_words_bold_10_left = {
+            'border': 1,
+            'text_wrap': True,
+            'bold': True,
+            'align': 'left',
+            'valign': 'vcenter',
+            "font_size": 10,
+            "font_name": "Avenir Next",
+            "font_color": COLOR_MAPPING.get('font_colors')[0],
+            "bg_color": COLOR_MAPPING.get('bg_colors')[0],
+        }
+
+        pallete_a_words_bold_10_center = {
+            'border': 1,
+            'text_wrap': True,
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            "font_size": 10,
+            "font_name": "Avenir Next",
+            "font_color": COLOR_MAPPING.get('font_colors')[0],
+            "bg_color": COLOR_MAPPING.get('bg_colors')[0],
+        }
+
+        pallete_b_number_8_center = {
+            'border': 1,
+            'num_format': '€#,##0.00',
+            'text_wrap': True,
+            'bold': False,
+            'align': 'center',
+            'valign': 'vcenter',
+            "font_size": 8,
+            "font_name": "Avenir Next",
+            "font_color": COLOR_MAPPING.get('font_colors')[1],
+            "bg_color": COLOR_MAPPING.get('bg_colors')[1],
+        }
+
+        pallete_c_number_8_center = {
+            'border': 1,
+            'num_format': '€#,##0.00',
+            'text_wrap': True,
+            'bold': False,
+            'align': 'center',
+            'valign': 'vcenter',
+            "font_size": 8,
+            "font_name": "Avenir Next",
+            "font_color": COLOR_MAPPING.get('font_colors')[2],
+            "bg_color": COLOR_MAPPING.get('bg_colors')[2],
+        }
+
+        pallete_D_Words_Bold_10_Left = {
+            'border': 1,
+            'num_format': '€#,##0.00',
+            'text_wrap': True,
+            'bold': True,
+            'align': 'left',
+            'valign': 'vcenter',
+            "font_size": 10,
+            "font_name": "Avenir Next",
+            "font_color": COLOR_MAPPING.get('font_colors')[3],
+            "bg_color": COLOR_MAPPING.get('bg_colors')[3],
+        }
 
         # PUT DATA INSIDE EXCEL
         s_df.to_excel(writer, sheet_name='TODAY', startcol=2, startrow=1, index=None)
@@ -202,10 +328,13 @@ def export(path_to_file, df, year):
             worksheet.write(i + 2, 0, i + 1)
 
         # ADD TITLE ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΜΑ
-        worksheet.merge_range(f'A1:C1', f'ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΑ {year}', normal_bold_10_center)
+        worksheet.merge_range(f'A1:C1', f'ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΑ {year}', yellow) # or normal_bold_10_center
 
         # ADD CREATION DATE
-        worksheet.merge_range(f'M1:O1', f'ΗΜΕΡΟΜΗΝΙΑ ΔΗΜΙΟΥΡΓΙΑΣ: {datetime.now().strftime("%d %b %Y %H:%M:%S").upper()}', normal_bold_10_center)
+        worksheet.merge_range(f'P1:R1', f'ΗΜΕΡΟΜΗΝΙΑ ΔΗΜΙΟΥΡΓΙΑΣ: {datetime.now().strftime("%d %b %Y %H:%M:%S").upper()}', yellow)
+        worksheet.merge_range(f'K1:M1',
+                              f'ΒΟΗΘΗΤΙΚΑ ΠΕΔΙΑ',
+                              yellow)
 
         # Autofit the worksheet.
         worksheet.autofit()
@@ -223,7 +352,30 @@ def export(path_to_file, df, year):
         worksheet.set_column('L:L', 17, number_8_black)
         worksheet.set_column('M:M', 17, number_8_black)
         worksheet.set_column('N:N', 17, number_8_black)
-        worksheet.set_column('O:O', 21, normal_bold_10)
+        worksheet.set_column('O:O', 17, number_8_black)
+        worksheet.set_column('P:P', 17, number_8_black)
+        worksheet.set_column('Q:Q', 17, number_8_black)
+        worksheet.set_column('R:R', 21, normal_bold_10)
+
+        # COLOR ΤΙΤΛΟΣ & ΚΑ ΕΞΟΔΩΝ
+        color_entire_cell(s_df, 'ΤΙΤΛΟΣ', worksheet, workbook, pallete_a_words_bold_10_left)
+        color_entire_cell(s_df, 'ΚΑ ΕΞΟΔΩΝ', worksheet, workbook, pallete_a_words_bold_10_center)
+        color_entire_cell(s_df, 'ΠΡΟΤΑΘΕΝΤΑ 2024', worksheet, workbook, pallete_b_number_8_center)
+        color_entire_cell(s_df, 'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ', worksheet, workbook, pallete_D_Words_Bold_10_Left)
+        color_entire_cell(s_df, 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ', worksheet, workbook, pallete_c_number_8_center)
+        color_entire_cell(s_df, 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ', worksheet, workbook, pallete_c_number_8_center)
+        color_entire_cell(s_df, 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ', worksheet, workbook, pallete_c_number_8_center)
+        color_entire_cell(s_df, 'ΕΚΤΙΜΗΣΗ ΠΛΗΡΩΜΩΝ 31/12/2022', worksheet, workbook, pallete_c_number_8_center)
+        color_entire_cell(s_df, 'ΣΥΜΠΛΗΡΩΜΕΝΗ ΕΚΤΙΜΗΣΗ', worksheet, workbook, pallete_c_number_8_center)
+
+        # ADD FORMULA
+        for row_idx, cell_value in enumerate(s_df['ΔΙΑΦΟΡΑ ΕΚΤΙΜΗΣΕΩΝ'], start=2):
+                x = row_idx + 1
+                worksheet.write_formula(f'M{x}', f'=L{x}-K{x}')
+        print(start)
+        worksheet.write_formula(f'K{start}', f'=SUM(K3:K{start - 1})')
+        worksheet.write_formula(f'L{start}', f'=SUM(L3:L{start - 1})')
+        worksheet.write_formula(f'M{start}', f'=SUM(M3:M{start - 1})')
 
         # FREEZE PANES
         worksheet.freeze_panes(2, 3)
@@ -233,10 +385,17 @@ def export(path_to_file, df, year):
         worksheet.write(f"H{start}", s_df['ΥΦΙΣΤΑΜΕΝΗ ΝΟΜΙΚΗ ΔΕΣΜΕΥΣΗ'].sum().round(2), number_10_black_bold)
         worksheet.write(f"I{start}", s_df['ΕΞΟΦΛΗΜΕΝΑ ΤΙΜΟΛΟΓΙΑ'].sum().round(2), number_10_black_bold)
         worksheet.write(f"J{start}", s_df['ΥΠΟΛΟΙΠΟ ΠΛΗΡΩΘΕΝ ΥΦ. ΝΟΜ. ΔΕΣΜ.'].sum().round(2), number_10_black_bold)
-        worksheet.write(f"K{start}", s_df['ΠΡΟΤΑΘΕΝΤΑ 2024'].sum().round(2), number_10_black_bold)
-        worksheet.write(f"L{start}", s_df['ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ'].sum().round(2), number_10_black_bold)
-        worksheet.write(f"M{start}", s_df['ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ'].sum().round(2), number_10_black_bold)
-        worksheet.write(f"N{start}", s_df['ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ'].sum().round(2), number_10_black_bold)
+        worksheet.write(f"N{start}", s_df['ΠΡΟΤΑΘΕΝΤΑ 2024'].sum().round(2), number_10_black_bold)
+        worksheet.write(f"O{start}", s_df['ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ'].sum().round(2), number_10_black_bold)
+        worksheet.write(f"P{start}", s_df['ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ'].sum().round(2), number_10_black_bold)
+        worksheet.write(f"Q{start}", s_df['ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ'].sum().round(2), number_10_black_bold)
+        worksheet.merge_range(f'O{start + 1}:Q{start + 1}',
+                              s_df['ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ'].sum().round(2)
+                              + s_df['ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ'].sum().round(2)
+                              + s_df['ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ'].sum().round(2), number_10_black_bold)
+
+
+
 
 
 def run():
@@ -248,14 +407,15 @@ def run():
     """
     cwd = os.path.dirname(os.path.abspath(__file__))
     year = 2023  # int(input("ΕΤΟΣ:"))
-    excel_file = f'{cwd}/DATA/{year}//1.xls'
+    excel_file = f'{cwd}/DATA/{year}//egkritos.xls'
     file = f'{cwd}/final.xlsx'
 
     # CHECK IF FILE EXISTS
     if os.path.exists(excel_file):
         df = pd.read_excel(excel_file)
         export(file, df, year)
-        send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+        # send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+        os.system(f'open "{file}"')
     else:
         print(f"File not found at {excel_file}")
 
