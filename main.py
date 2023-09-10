@@ -2,8 +2,8 @@
 
 import pandas as pd
 import os
-import send_mail
-from send_mail import users as mail_users
+from MAIL import send_mail
+from MAIL.send_mail import users as mail_users
 from datetime import datetime
 import time
 
@@ -405,7 +405,7 @@ def run():
     file = f'{cwd}/final.xlsx'
 
     # -------------------- OPEN HTML FILE FOR THE BODY MAIL --------------------
-    with open(f'{cwd}/body.html', 'r') as html_file:
+    with open(f'{cwd}/MAIL/body.html', 'r') as html_file:
         word = html_file.read()
 
     # CHECK IF FILE EXISTS
