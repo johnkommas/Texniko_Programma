@@ -2,7 +2,6 @@
 
 import pandas as pd
 import os
-import copy
 import send_mail
 from send_mail import users as mail_users
 from datetime import datetime
@@ -12,9 +11,6 @@ import time
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_rows', None)
-
-
-
 
 COLUMN_MAPPING = {'Tίτλος': 'ΤΙΤΛΟΣ',
                   'Κατηγορία': 'ΚΑΤΗΓΟΡΙΑ',
@@ -37,22 +33,22 @@ SELECTED_COLUMNS = ['ΤΙΤΛΟΣ', 'ΚΑΤΗΓΟΡΙΑ', 'ΥΠΗΡΕΣΙΑ', '�
                     'ΠΡΟΤΑΘΕΝΤΑ 2024', 'ΤΑΚΤΙΚΑ/ΙΔΙΟΙ ΠΟΡΟΙ', 'ΣΑΤΑ ΠΟΕ/ΝΕΑ ΣΑΤΑ', 'ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ',
                     'ΠΗΓΗ ΧΡΗΜ/ΣΗΣ']
 
-
-
 COLOR_MAPPING = {"bg_colors": ['#EBA796', '#56A2AE', '#51AEAD', '#5DA5C5'],
-                 "font_colors":['black', 'black', 'black', 'black'] }
+                 "font_colors": ['black', 'black', 'black', 'black']}
+
 
 def rename_and_select_columns(df, year):
     """
     Function to rename and select the required columns in the dataframe.
 
+    :param year:
     :param df: Dataframe to be manipulated
     :return: A new dataframe with renamed and chosen columns
     """
     # Rename column names
     df = df.rename(columns=COLUMN_MAPPING)
 
-    # ADD COLUMS IF FILE DOES NOT EXIST
+    # ADD COLUMNS IF FILE DOES NOT EXIST
     cwd = os.path.dirname(os.path.abspath(__file__))
     excel_file = f'{cwd}/DATA/{year}/first.xlsx'
     if os.path.exists(excel_file):
@@ -328,10 +324,11 @@ def export(path_to_file, df, year):
             worksheet.write(i + 2, 0, i + 1)
 
         # ADD TITLE ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΜΑ
-        worksheet.merge_range(f'A1:C1', f'ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΑ {year}', yellow) # or normal_bold_10_center
+        worksheet.merge_range(f'A1:C1', f'ΤΕΧΝΙΚΟ ΠΡΟΓΡΑΜΑ {year}', yellow)  # or normal_bold_10_center
 
         # ADD CREATION DATE
-        worksheet.merge_range(f'P1:R1', f'ΗΜΕΡΟΜΗΝΙΑ ΔΗΜΙΟΥΡΓΙΑΣ: {datetime.now().strftime("%d %b %Y %H:%M:%S").upper()}', yellow)
+        worksheet.merge_range(f'P1:R1',
+                              f'ΗΜΕΡΟΜΗΝΙΑ ΔΗΜΙΟΥΡΓΙΑΣ: {datetime.now().strftime("%d %b %Y %H:%M:%S").upper()}', yellow)
         worksheet.merge_range(f'K1:M1',
                               f'ΒΟΗΘΗΤΙΚΑ ΠΕΔΙΑ',
                               yellow)
@@ -370,8 +367,8 @@ def export(path_to_file, df, year):
 
         # ADD FORMULA
         for row_idx, cell_value in enumerate(s_df['ΔΙΑΦΟΡΑ ΕΚΤΙΜΗΣΕΩΝ'], start=2):
-                x = row_idx + 1
-                worksheet.write_formula(f'M{x}', f'=L{x}-K{x}')
+            x = row_idx + 1
+            worksheet.write_formula(f'M{x}', f'=L{x}-K{x}')
         print(start)
         worksheet.write_formula(f'K{start}', f'=SUM(K3:K{start - 1})')
         worksheet.write_formula(f'L{start}', f'=SUM(L3:L{start - 1})')
@@ -395,9 +392,6 @@ def export(path_to_file, df, year):
                               + s_df['ΔΙΑΦΟΡΑ/ΑΝΤΑΠΟΔ/ΧΡΗΜ/ΣΕΙΣ'].sum().round(2), number_10_black_bold)
 
 
-
-
-
 def run():
     """
         This function extracts data from an Excel file for a given year and exports the data
@@ -410,11 +404,15 @@ def run():
     excel_file = f'{cwd}/DATA/{year}//egkritos.xls'
     file = f'{cwd}/final.xlsx'
 
+    # -------------------- OPEN HTML FILE FOR THE BODY MAIL --------------------
+    with open(f'{cwd}/body.html', 'r') as html_file:
+        word = html_file.read()
+
     # CHECK IF FILE EXISTS
     if os.path.exists(excel_file):
         df = pd.read_excel(excel_file)
         export(file, df, year)
-        # send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), 'FILE', file, 'final.xlsx')
+        send_mail.send_mail(mail_users.get('mail'), mail_users.get('Title'), word, file, 'final.xlsx')
         os.system(f'open "{file}"')
     else:
         print(f"File not found at {excel_file}")
